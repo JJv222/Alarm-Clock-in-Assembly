@@ -1,0 +1,253 @@
+     1                  ;-----------------------------------------------------------------------
+     2                  
+     3                  
+     4                  ;                            USTAWIENIA 
+     5                  
+     6                  
+     7                  ;-----------------------------------------------------------------------
+     8        0097      LED EQU P1.7
+     9        0095      DZWONEK EQU P1.5
+    10  0000: 02 01 00      LJMP START
+    11                  ;-----------------------------------------------------------------------
+    12                  ;                            PRZERWANIA 
+    13                  ;-----------------------------------------------------------------------
+    14  001B:               ORG 1BH
+    15  001B: 75 8D 4C      MOV TH1,#76 
+    16  001E: D8 06         DJNZ R0,NO_1SEK ;czy minęła 1 sek 
+    17  0020: B2 97         CPL LED ;zmiana stanu diody
+    18  0022: B2 95         CPL DZWONEK ;zmiana stanu głośnika
+    19  0024: C2 8E         CLR TR1
+    20  0026:           NO_1SEK: 
+    21  0026: 32            RETI 
+    22                  ;-----------------------------------------------------------------------
+    23                  
+    24                  
+    25                  ;                            PROGRAM GŁÓWNY
+    26                  
+    27                  
+    28                  ;-----------------------------------------------------------------------
+    29  0100:               ORG 100H
+    30  0100:           START:
+    31  0100: C2 D3         CLR RS0
+    32  0102: 12 81 0C      LCALL LCD_CLR
+    33  0105: 12 81 1C      LCALL WAIT_KEY
+    34  0108: F8            MOV R0,A
+    35  0109: 12 81 14      LCALL WAIT_ENTER
+    36                  ;-----------------------------------------------------------------------
+    37                  ;                            Wybór wtrybu timera
+    38                  ;-----------------------------------------------------------------------
+    39  010C: E8            MOV A,R0
+    40  010D: B4 00 12      CJNE A,#0,TYP_1
+    41  0110:           TYP_0:
+    42  0110: 75 89 10      MOV TMOD,#16
+    43                  
+    44  0113: 75 8C 70      MOV TH0,#112 
+    45  0116: 75 8A 00      MOV TL0,#0 
+    46                      
+    47  0119: 75 8D 4C      MOV TH1,#76
+    48  011C: 75 8B 00      MOV TL1,#0 
+    49  011F: 02 01 5B      LJMP SET_IT
+    50                  
+    51  0122:           TYP_1:
+    52  0122: B4 01 12      CJNE A,#1,TYP_2
+    53  0125: 75 89 11      MOV TMOD,#17
+    54                  
+    55  0128: 75 8C 4C      MOV TH0,#76 
+    56  012B: 75 8A 00      MOV TL0,#0 
+    57                      
+    58  012E: 75 8D 4C      MOV TH1,#76 
+    59  0131: 75 8B 00      MOV TL1,#0
+    60  0134: 02 01 5B      LJMP SET_IT
+    61  0137:           TYP_2:
+    62  0137: B4 02 12      CJNE A,#2,TYP_3
+    63  013A: 75 89 12      MOV TMOD,#18
+    64                  
+    65  013D: 75 8C 00      MOV TH0,#0
+    66  0140: 75 8A 00      MOV TL0,#0 
+    67                      
+    68  0143: 75 8D 4C      MOV TH1,#76 
+    69  0146: 75 8B 00      MOV TL1,#0
+    70  0149: 02 01 5B      LJMP SET_IT
+    71  014C:           TYP_3:
+    72  014C: 75 89 13      MOV TMOD,#19
+    73  014F: 75 8C 00      MOV TH0,#0
+    74  0152: 75 8A 00      MOV TL0,#0 
+    75                      
+    76  0155: 75 8D 4C      MOV TH1,#76 
+    77  0158: 75 8B 00      MOV TL1,#0
+    78                  ;---------------------------------
+    79                  
+    80  015B:           SET_IT:
+    81  015B: D2 AF         SETB EA
+    82  015D: D2 AB         SETB ET1
+    83  015F: D2 8C         SETB TR0
+    84                      ; ustawienie zegara
+    85  0161: 12 01 C2      LCALL WPROWADZ
+    86  0164: F9            MOV R1,A
+    87  0165: 12 01 C2      LCALL WPROWADZ
+    88  0168: FA            MOV R2,A
+    89  0169: 12 01 C2      LCALL WPROWADZ
+    90  016C: FB            MOV R3,A
+    91  016D: 12 81 14      LCALL WAIT_ENTER
+    92  0170: 12 81 0C      LCALL LCD_CLR
+    93                      ; ustawienie stopera
+    94  0173: 12 01 C2      LCALL WPROWADZ
+    95  0176: FC            MOV R4,A
+    96  0177: 12 01 C2      LCALL WPROWADZ
+    97  017A: FD            MOV R5,A
+    98  017B: 12 01 C2      LCALL WPROWADZ
+    99  017E: FE            MOV R6,A
+   100  017F: 12 01 DE      LCALL DISPLEE
+   101  0182: E8            MOV A,R0
+   102  0183: B4 00 0D      CJNE A,#0,LOP1
+   103                  ;informacje R1-HH,R2-MM,R3-SS
+   104                  ;-----------------------------------------------------------------------
+   105                  ;                               PĘTLA GŁÓWNA
+   106                  ;-----------------------------------------------------------------------
+   107                  ;--mode 0
+   108  0186:           LOOP0:
+   109  0186: 12 02 0E      LCALL CHECK_ALARM
+   110  0189: 7F C8         MOV R7,#200 
+   111  018B: 12 01 F8      LCALL HOUR_UPDATE
+   112  018E: 12 02 23      LCALL DISPLAY_CLOCK_0
+   113  0191: 80 F3     	SJMP LOOP0
+   114                  
+   115                  ;--mode 1
+   116  0193:           LOP1:
+   117  0193: E8            MOV A,R0
+   118  0194: B4 01 0D      CJNE A,#1,LOP2
+   119  0197:           LOOP1:
+   120  0197: 12 02 0E      LCALL CHECK_ALARM
+   121  019A: 7F 14         MOV R7,#20 
+   122  019C: 12 01 F8      LCALL HOUR_UPDATE
+   123  019F: 12 02 31      LCALL DISPLAY_CLOCK_1
+   124  01A2: 80 F3     	SJMP LOOP1
+   125                  
+   126                  ;--mode 2
+   127  01A4:           LOP2:
+   128  01A4: B4 02 0D      CJNE A,#2,LOOP3
+   129  01A7:           LOOP2:
+   130  01A7: 12 02 0E      LCALL CHECK_ALARM
+   131  01AA: 7F B4         MOV R7,#180 
+   132  01AC: 12 01 F8      LCALL HOUR_UPDATE
+   133  01AF: 12 02 3F      LCALL DISPLAY_CLOCK_2
+   134  01B2: 80 F3     	SJMP LOOP2
+   135                  ;--mode 3
+   136  01B4:           LOOP3:
+   137  01B4: 12 02 0E      LCALL CHECK_ALARM
+   138  01B7: 7F B4         MOV R7,#180 
+   139  01B9: 12 01 F8      LCALL HOUR_UPDATE
+   140  01BC: 12 02 3F      LCALL DISPLAY_CLOCK_2
+   141  01BF: 80 F3     	SJMP LOOP3
+   142  01C1: 00            NOP
+   143                  ;-----------------------------------------------------------------------
+   144                  
+   145                  
+   146                  ;                        FUNKCJE DODATKOWE
+   147                  
+   148                  
+   149                  ;-----------------------------------------------------------------------
+   150  01C2:           WPROWADZ: ;wprowadzanie 2 liczb 2 cyfrowych w bcd
+   151  01C2: 12 81 1C      LCALL WAIT_KEY ; Wczytaj liczbę dziesiątek
+   152  01C5: 75 F0 0A      MOV B,#10 ; pomnóż
+   153  01C8: A4            MUL AB ; przez 10
+   154  01C9: C0 E0         PUSH ACC
+   155  01CB: 12 81 1C      LCALL WAIT_KEY ;wczytaj liczbę jedności
+   156  01CE: D0 F0         POP B
+   157  01D0: 25 F0         ADD A,B ; dodaj liczbę jedności do R1
+   158  01D2: 22            RET ; wyjdź z podprogramu. Wynik w A.
+   159                  
+   160                  
+   161  01D3:           BCD:    ;funkcja przelicza hex na bcd 2cyfrowe
+   162                      ; ACC-liczba do zamiany np: 93 albo 255
+   163  01D3: 75 F0 0A      MOV B,#10
+   164  01D6: 84            DIV AB
+   165  01D7: C4            SWAP A
+   166  01D8: 25 F0         ADD A,B
+   167  01DA: 12 81 04      LCALL WRITE_HEX
+   168  01DD: 22            RET
+   169  01DE:           DISPLEE:; funkcja wyswietla zegar
+   170  01DE: 12 81 0C      LCALL LCD_CLR
+   171  01E1: E9            MOV A,R1
+   172  01E2: 12 01 D3      LCALL BCD
+   173  01E5: 74 3A         MOV A,#':'
+   174  01E7: 12 81 02      LCALL WRITE_DATA
+   175  01EA: EA            MOV A,R2
+   176  01EB: 12 01 D3      LCALL BCD
+   177  01EE: 74 3A         MOV A,#':'
+   178  01F0: 12 81 02      LCALL WRITE_DATA
+   179  01F3: EB            MOV A,R3
+   180  01F4: 12 01 D3      LCALL BCD
+   181  01F7: 22            RET
+   182                  
+   183  01F8:           HOUR_UPDATE: ;funkcja aktualizuje czas zegara
+   184  01F8: 05 03         INC 03
+   185                  ;sekundy
+   186  01FA: BB 3C 10      CJNE R3,#60,FIN
+   187  01FD: 05 02         INC 02
+   188  01FF: 7B 00         MOV R3,#0
+   189                  ;minuty
+   190  0201: BA 3C 09      CJNE R2,#60,FIN
+   191  0204: 05 01         INC 01
+   192  0206: 7A 00         MOV R2,#0
+   193                  ;godziny
+   194  0208: B9 18 02      CJNE R1,#24,FIN
+   195  020B: 79 00         MOV R1,#0
+   196  020D:           FIN:
+   197  020D: 22            RET
+   198                  
+   199                  
+   200  020E:           CHECK_ALARM: ;funkcja sprawdza czy włączyć alarm
+   201  020E: EB            MOV A,R3
+   202  020F: B5 06 10      CJNE A,06,Fin
+   203  0212: EA            MOV A,R2
+   204  0213: B5 05 0C      CJNE A,05,Fin
+   205  0216: E9            MOV A,R1
+   206  0217: B5 04 08      CJNE A,04,Fin
+   207  021A: 78 50         MOV R0,#80 ; alarm to dioda i dziwek trwajacy około 4sekundy
+   208  021C: B2 97         CPL LED
+   209  021E: B2 95         CPL DZWONEK
+   210  0220: D2 8E         SETB TR1 ;start Timera 1
+   211  0222:           Fin:
+   212  0222: 22            RET
+   213                  
+   214                  
+   215  0223:           DISPLAY_CLOCK_0: ;funkcja odpowiada za wywołanie timera który wykonue skip czasu 50ms*R7
+   216  0223:           START_TIMER_0:
+   217  0223: 30 8D FD  	JNB TF0,$			;czekaj, aż Timer 0
+   218  0226: 75 8C 70  	MOV TH0,#112 	;TH0 na 5ms
+   219  0229: C2 8D     	CLR TF0 			;zerowanie flagi timera 0
+   220  022B: DF F6     	DJNZ R7,START_TIMER_0 	;odczekanie 200*5ms=1s
+   221                      ;wyswietl zegar
+   222  022D: 12 01 DE      LCALL DISPLEE
+   223  0230: 22            RET
+   224                  
+   225  0231:           DISPLAY_CLOCK_1: ;funkcja odpowiada za wywołanie timera który wykonue skip czasu 50ms*R7
+   226  0231:           START_TIMER_1:
+   227  0231: 30 8D FD  	JNB TF0,$			;czekaj, aż Timer 0
+   228  0234: 75 8C 4C  	MOV TH0,#76 	;TH0 na 50ms
+   229  0237: C2 8D     	CLR TF0 			;zerowanie flagi timera 0
+   230  0239: DF F6     	DJNZ R7,START_TIMER_1 	;odczekanie 20*50ms=1s
+   231                      ;wyswietl zegar
+   232  023B: 12 01 DE      LCALL DISPLEE
+   233  023E: 22            RET
+   234  023F:           DISPLAY_CLOCK_2: ;funkcja odpowiada za wywołanie timera który wykonue skip czasu 50ms*R7
+   235  023F: 74 14         MOV A,#20
+   236  0241:           UPD:
+   237  0241: C0 E0         PUSH ACC
+   238  0243:           START_TIMER_2:
+   239  0243: 30 8D FD  	JNB TF0,$			;czekaj, aż Timer 0	
+   240  0246: C2 8D     	CLR TF0 			;zerowanie flagi timera 0
+   241  0248: DF F9     	DJNZ R7,START_TIMER_2 	;odczekanie 20*50ms=1s
+   242  024A: 7F B4         MOV R7,#180
+   243  024C: D0 E0         POP ACC
+   244  024E: D5 E0 F0      DJNZ ACC,UPD
+   245                      ;wyswietl zegar
+   246  0251: 12 01 DE      LCALL DISPLEE
+   247  0254: 22            RET
+   248                  
+   249                  
+   250                  
+   251  0255:           STOP: ;funkcja końcowa
+   252  0255: 02 02 55  	LJMP STOP
+   253  0258: 00        	NOP
